@@ -1,26 +1,44 @@
+# db.py
 import os
-from pymongo import MongoClient
-from pymongo.errors import ConnectionFailure
+from pymongo import MongoClient, errors
+import certifi
 from dotenv import load_dotenv
 
-# Load environment variables from .env file
+# Load environment variables
 load_dotenv()
 
-# Get MongoDB connection string from environment variables
 MONGO_URI = os.getenv("MONGO_URI")
-DB_NAME = os.getenv("DB_NAME", "ecommerce")
+DB_NAME = os.getenv("DB_NAME")
 
-ecommerce_db = None
+if not MONGO_URI:
+    raise ValueError("MONGO_URI environment variable not set.")
+if not DB_NAME:
+    raise ValueError("DB_NAME environment variable not set.")
 
+# Use certifi for proper SSL/TLS certificates
+tls_ca_file = certifi.where()
+
+# Create MongoClient with SSL/TLS options
 try:
-    if not MONGO_URI:
-        raise ValueError("MONGO_URI environment variable not set.")
-    # Connect to MongoDB
-    mongo_client = MongoClient(MONGO_URI)
-    mongo_client.admin.command('ping') # Check connection
-    ecommerce_db = mongo_client[DB_NAME]
+    client = MongoClient(MONGO_URI, tlsCAFile=tls_ca_file, serverSelectionTimeoutMS=10000)
+    # Test connection
+    client.admin.command("ping")
+    print("✅ Successfully connected to MongoDB Atlas")
 
-    print("✅ Successfully connected to MongoDB")
+except errors.ServerSelectionTimeoutError as err:
+    print("❌ Could not connect to MongoDB Atlas:")
+    print(err)
+    raise SystemExit(err)
 
-except (ConnectionFailure, ValueError) as e:
-    print(f"❌ Error connecting to MongoDB: {e}")
+except errors.ConnectionFailure as err:
+    print("❌ MongoDB connection failed:")
+    print(err)
+    raise SystemExit(err)
+
+except Exception as e:
+    print("❌ An unexpected error occurred:")
+    print(e)
+    raise SystemExit(e)
+
+# Access the database
+ecommerce_db = client[DB_NAME]

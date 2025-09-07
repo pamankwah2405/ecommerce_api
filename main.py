@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException, Depends
+import uvicorn
 from pydantic import BaseModel, Field
 
 from bson import ObjectId
@@ -262,3 +263,8 @@ def delete_product(
         return {"message": "Product deleted successfully"}
     except InvalidId:
         raise HTTPException(status_code=400, detail="Invalid product ID format")
+
+
+if __name__ == "__main__":
+    # Use uvicorn to run the app
+    uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
